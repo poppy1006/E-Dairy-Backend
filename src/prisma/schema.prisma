@@ -1,0 +1,139 @@
+datasource db {
+  url      = env("DATABASE_URL")
+  provider = "mysql"
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+model Admin {
+  id             String        @id @default(uuid())
+  name           String
+  email          String        @unique()
+  password       String        @db.VarChar(255)
+  otp            Json?
+  active         Boolean       @default(true)
+  institution_id String?       @unique
+  institute      Institutions? @relation(fields: [institution_id], references: [id])
+  role           Role
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Institutions {
+  id         String       @id @default(uuid())
+  name       String
+  location   String?
+  students   Student[]
+  pos        POS[]
+  admin      Admin?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  Department Department[]
+}
+
+model Student {
+  id              String       @id @default(uuid())
+  display_picture String
+  name            String
+  active          Boolean      @default(true)
+  admission_year  String
+  email           String       @unique()
+  password        String       @db.VarChar(255)
+  otp             Json?
+  phone_no        String
+  registration_no String       @unique
+  institution_id  String
+  department_id   String
+  dob             DateTime
+  blood_group     String
+  address         Json
+  department      Department   @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  institution     Institutions @relation(fields: [institution_id], references: [id], onDelete: Cascade)
+  id_card         IDcard[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  feedbacks       Feedback[]
+}
+
+model Transactions {
+  id               String          @id @default(uuid())
+  amount           Int
+  description      String?
+  transaction_date DateTime
+  transaction_type TransactionType
+  pos_id           String?
+  wallet_id        String?
+  wallet           Wallet?         @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  pos              POS?            @relation(fields: [pos_id], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Wallet {
+  id           String         @id @default(uuid())
+  student_id   String         @unique
+  balance      Int
+  last_updated DateTime?
+  transactions Transactions[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model IDcard {
+  id                String   @id @default(uuid())
+  student_id        String   @unique
+  issue_date        DateTime @default(now())
+  expiry_date       DateTime
+  active            Boolean  @default(true)
+  transaction_limit String?
+  student           Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model POS {
+  id                 String         @id @default(uuid())
+  account_details    Json?
+  location           String
+  amount_to_withdraw Int            @default(0)
+  total_amount       Int            @default(0)
+  institution_id     String
+  institution        Institutions   @relation(fields: [institution_id], references: [id], onDelete: Cascade)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  Transactions       Transactions[]
+}
+
+model Department {
+  id             String       @id @default(uuid())
+  name           String
+  institution_id String
+  institution    Institutions @relation(fields: [institution_id], references: [id], onDelete: Cascade)
+  Student        Student[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([name, institution_id])
+}
+
+model Feedback {
+  id         String   @id @default(uuid())
+  feedback   String
+  student_id String
+  student    Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum Role {
+  SUPER_ADMIN
+  INSTITUTION_ADMIN
+}
